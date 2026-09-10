@@ -1,4 +1,5 @@
 from pyspark.sql import functions as F
+from pyspark.sql import Row
 from pyspark.sql.types import (
     StringType,
     ByteType,
@@ -243,3 +244,50 @@ def numeric_summary (df):
     summary_df = df.select(numeric_columns).summary()
 
     return summary_df
+
+def quantile_summary(
+    df,
+    columns: list[str],
+    percentiles: list[float] | None = None,
+    relative_error: float = 0.001,
+):
+    """
+    Calcula percentiles aproximados para un conjunto de columnas numéricas.
+
+    Args:
+        df: DataFrame de Spark.
+        columns: Columnas numéricas a analizar.
+        percentiles: Lista de percentiles (entre 0 y 1).
+        relative_error: Error relativo permitido por approxQuantile().
+
+    Returns:
+        DataFrame de Spark con una fila por variable.
+    """
+
+    if percentiles is None:
+        percentiles = [0.0, 0.25, 0.5, 0.75, 0.90, 0.95, 0.99, 0.999]
+
+    rows = []
+
+    for col in columns:
+        values = df.approxQuantile(
+            col,
+            percentiles,
+            relative_error,
+        )
+
+        rows.append(
+            Row(
+                variable=col,
+                min=values[0],
+                p25=values[1],
+                median=values[2],
+                p75=values[3],
+                p90=values[4],
+                p95=values[5],
+                p99=values[6],
+                p999=values[7],
+            )
+        )
+
+    return df.sparkSession.createDataFrame(rows)

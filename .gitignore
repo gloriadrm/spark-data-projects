@@ -25,3 +25,5 @@ spark-warehouse/
 
 # Sistema
 .DS_Store
+
+src/
