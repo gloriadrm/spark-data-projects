@@ -59,7 +59,7 @@ Para cada caso se comparan:
 
 ## 🔎 Resultados
 
-En **3 de las 4 comparaciones** —filtro + selección, agregación y Top 3 por distrito mediante Window Function + CTE— DataFrame API y Spark SQL generaron el mismo Physical Plan.
+En **3 de las 4 comparaciones** se generó el mismo Physical Plan.
 
 La única diferencia apareció en el cálculo de la **tasa de arrestos**. En DataFrame API el cálculo se realizó mediante un `.withColumn()` posterior al `.agg()`, generando un `Project` adicional, mientras que Spark SQL integró el cálculo directamente dentro del `HashAggregate`.
 
