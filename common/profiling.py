@@ -12,17 +12,36 @@ from pyspark.sql.types import (
 )
 
 
-def duplicate_count(df):
+def duplicate_count(df, exclude_columns=None):
+    exclude_columns = exclude_columns or []
+
+    columns = [
+        column
+        for column in df.columns
+        if column not in exclude_columns
+    ]
+
+    if not columns:
+        raise ValueError(
+            "Debe quedar al menos una columna para comprobar duplicados."
+        )
+
     duplicates = (
-        df.groupBy(*df.columns)
+        df
+        .groupBy(*columns)
         .count()
         .filter(F.col("count") > 1)
     )
 
     return duplicates.agg(
-        # duplicate_groups = unique values de duplicated rows
+        # Número de patrones distintos que aparecen más de una vez
         F.count("*").alias("duplicate_groups"),
-        F.sum(F.col("count") - 1).alias("duplicate_rows")
+
+        # Número de filas redundantes si conservamos una copia de cada patrón
+        F.coalesce(
+            F.sum(F.col("count") - 1),
+            F.lit(0)
+        ).alias("duplicate_rows")
     )
 
 def missing_values_profile(
@@ -190,24 +209,30 @@ def show_result(df, empty_message):
     else:
         df.show(truncate=False)
 
-def cardinality_profile(df):
+def cardinality_profile(df, columns=None):
+    if columns is None:
+        columns = df.columns
+
+    if not columns:
+        raise ValueError("La lista de columnas no puede estar vacía.")
+
     row_count = df.count()
 
     aggregations = [
         F.countDistinct(column).alias(column)
-        for column in df.columns
+        for column in columns
     ]
 
     counts = df.agg(*aggregations)
 
     profile = []
 
-    for column in df.columns:
+    for column in columns:
         profile.append(
             counts.select(
                 F.lit(column).alias("column_name"),
                 F.col(f"`{column}`").alias("distinct_values"),
-                F.round( 
+                F.round(
                     F.col(f"`{column}`") / F.lit(row_count) * 100,
                     2,
                 ).alias("cardinality_pct"),
@@ -220,6 +245,33 @@ def cardinality_profile(df):
         result = result.unionByName(row)
 
     return result.orderBy(F.col("distinct_values").desc())
+
+def frequency_profile(df, column, limit=None):
+    total_rows = df.count()
+
+    result = (
+        df
+        .groupBy(
+            F.coalesce(
+                F.col(f"`{column}`").cast("string"),
+                F.lit("NULL")
+            ).alias("category")
+        )
+        .count()
+        .withColumn(
+            "percentage",
+            F.round(
+                F.col("count") / F.lit(total_rows) * 100,
+                2
+            )
+        )
+        .orderBy(F.col("count").desc())
+    )
+
+    if limit is not None:
+        result = result.limit(limit)
+
+    return result
 
 def numeric_summary (df):
     numeric_types = (
