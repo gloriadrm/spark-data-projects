@@ -26,4 +26,4 @@ spark-warehouse/
 # Sistema
 .DS_Store
 
-src/
+src/projects/*/output/
