@@ -1,8 +1,9 @@
 # spark-lab
 
-Laboratorio de práctica deliberada de Apache Spark (PySpark). No es un tutorial: cada mini
-proyecto tiene un objetivo de habilidad muy concreto, pensado para llegar con soltura al
-proyecto grande (Real-Time Air Traffic Analytics con Dataproc + Kafka + Terraform).
+Laboratorio de práctica deliberada de Apache Spark (PySpark). No es un tutorial: cada
+proyecto tiene un objetivo de habilidad muy concreto (transformaciones, window functions,
+datos anidados, arquitectura Medallion, Spark SQL, rendimiento y machine learning), y juntos
+cubren las bases para construir pipelines de datos con Spark a escala real.
 
 ## Estructura
 
@@ -60,7 +61,7 @@ que luego se trasladan al proyecto grande.
 
 - **Modularización:** trasladar la lógica validada en los notebooks a scripts ejecutables y reutilizables.
 - **Sistema de trabajo para ML con Spark MLlib:** plantilla y utilidades reutilizables (`common/`) equivalentes al flujo de trabajo con scikit-learn, aplicadas después al proyecto 07 (validación cruzada con `CrossValidator`, selección de features para reducir la multicolinealidad).
-- **Proyecto grande:** Real-Time Air Traffic Analytics con Dataproc + Kafka + Terraform.
+- **En el horizonte:** aplicar lo aprendido en un proyecto end-to-end de mayor escala, con procesamiento en streaming y despliegue en cloud.
 
 ## Setup
 
