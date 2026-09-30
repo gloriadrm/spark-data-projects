@@ -26,4 +26,8 @@ spark-warehouse/
 # Sistema
 .DS_Store
 
-src/projects/*/output/
+# Scaffolding de src/ (no se versiona)
+src/
+
+# Salidas generadas por los notebooks
+projects/*/output/

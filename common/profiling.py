@@ -59,13 +59,14 @@ def missing_values_profile(
 
     string_markers : dict, optional
         Mapping between output column names and textual markers.
+        Empty or whitespace-only strings are always counted in
+        `blank_count`, so they should not be passed as markers.
 
         Example:
         {
             "na_count": "NA",
             "n_a_count": "N/A",
             "unknown_count": "Unknown",
-            "empty_count": ""
         }
 
     output : str, default="count"
@@ -77,7 +78,8 @@ def missing_values_profile(
     Returns
     -------
     pyspark.sql.DataFrame
-        One row per column and one metric per missing representation.
+        One row per column and one metric per missing representation:
+        null_count, nan_count, blank_count and one column per marker.
     """
 
     valid_outputs = {"count", "percentage"}
@@ -111,8 +113,18 @@ def missing_values_profile(
                 ).alias(f"{column_name}__nan_count")
             )
 
-        # Marcadores textuales: solo para columnas string
+        # Solo para columnas string
         if isinstance(field.dataType, StringType):
+
+            # NUEVO — vacío o solo espacios en blanco
+            # (espacios, tabuladores, saltos de línea)
+            aggregations.append(
+                F.count(
+                    F.when(column.rlike(r"^\s*$"), 1)
+                ).alias(f"{column_name}__blank_count")
+            )
+
+            # Marcadores textuales
             for count_name, marker in string_markers.items():
                 aggregations.append(
                     F.count(
@@ -141,6 +153,16 @@ def missing_values_profile(
                 F.lit(0).cast("long").alias("nan_count")
             )
 
+        # NUEVO — blank_count
+        if isinstance(field.dataType, StringType):
+            expressions.append(
+                F.col(f"`{column_name}__blank_count`").alias("blank_count")
+            )
+        else:
+            expressions.append(
+                F.lit(0).cast("long").alias("blank_count")
+            )
+
         for count_name in string_markers:
             alias = f"{column_name}__{count_name}"
 
@@ -165,6 +187,7 @@ def missing_values_profile(
     count_columns = [
         "null_count",
         "nan_count",
+        "blank_count",          # NUEVO
         *string_markers.keys(),
     ]
 
@@ -273,7 +296,7 @@ def frequency_profile(df, column, limit=None):
 
     return result
 
-def numeric_summary (df):
+def numeric_summary(df, decimals=2):
     numeric_types = (
         ByteType,
         ShortType,
@@ -295,7 +318,15 @@ def numeric_summary (df):
 
     summary_df = df.select(numeric_columns).summary()
 
-    return summary_df
+    # summary() devuelve todas las columnas como string:
+    # se convierten a double para poder redondear
+    return summary_df.select(
+        "summary",
+        *[
+            F.round(F.col(c).cast("double"), decimals).alias(c)
+            for c in numeric_columns
+        ],
+    )
 
 def quantile_summary(
     df,
